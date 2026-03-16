@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
 type RequestOptions = {
   token?: string;
@@ -21,7 +21,14 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    let detail = "";
+    try {
+      const body = (await res.json()) as { detail?: string };
+      detail = body?.detail ? `: ${body.detail}` : "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(`API error ${res.status}${detail}`);
   }
   return res.json() as Promise<T>;
 }

@@ -22,8 +22,15 @@ export default function LoginPage() {
       document.cookie = `${AUTH_COOKIE_NAME}=${response.access_token}; path=/; max-age=7200; samesite=lax`;
       router.push("/dashboard");
       router.refresh();
-    } catch (_err) {
-      setError("Invalid credentials.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed";
+      if (message.includes("401")) {
+        setError("Invalid credentials.");
+      } else if (message.includes("Failed to fetch")) {
+        setError("Cannot reach API. Check NEXT_PUBLIC_API_BASE_URL and deployment routing.");
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
