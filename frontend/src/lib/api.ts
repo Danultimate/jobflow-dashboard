@@ -94,6 +94,23 @@ export type CoverLetterPayload = {
   job_description: string;
 };
 
+export type FitScorePayload = {
+  application_id: number;
+  profile_context: string;
+  job_description?: string;
+};
+
+export type ReviewPayload = {
+  application_id: number;
+  resume_text: string;
+  cover_letter: string;
+  job_description: string;
+};
+
+export type AIResponse = {
+  result: string;
+};
+
 export type LoginResponse = {
   access_token: string;
   token_type: string;
@@ -116,4 +133,8 @@ export const api = {
   documents: (token: string) => apiRequest<Document[]>("/documents", { token }),
   generateCoverLetter: (token: string, payload: CoverLetterPayload) =>
     apiRequest<Document>("/ai/cover-letter", { token, method: "POST", body: payload }),
+  fitScore: (token: string, payload: FitScorePayload) =>
+    apiRequest<AIResponse>("/ai/fit-score", { token, method: "POST", body: payload }),
+  reviewApplication: (token: string, payload: ReviewPayload) =>
+    apiRequest<AIResponse>("/ai/review", { token, method: "POST", body: payload }),
 };
