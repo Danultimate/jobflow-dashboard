@@ -22,7 +22,10 @@ def create_access_token(subject: str) -> str:
 
 def verify_credentials(username: str, password: str) -> bool:
     settings = get_settings()
-    return username == settings.auth_username and password == settings.auth_password
+    # Normalize common copy/paste issues from env panels and form inputs.
+    expected_user = (settings.auth_username or "").strip()
+    expected_password = (settings.auth_password or "").strip()
+    return username.strip() == expected_user and password.strip() == expected_password
 
 
 def require_auth(

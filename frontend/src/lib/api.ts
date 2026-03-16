@@ -65,8 +65,33 @@ export type Document = {
   application_id: number;
   kind: string;
   title: string;
+  content?: string;
   version: number;
   created_at: string;
+};
+
+export type JobImportPayload = {
+  source?: string;
+  external_id?: string;
+  title: string;
+  company: string;
+  location?: string;
+  description?: string;
+  url?: string;
+};
+
+export type ApplicationCreatePayload = {
+  job_posting_id: number;
+  status?: string;
+  notes?: string;
+};
+
+export type CoverLetterPayload = {
+  application_id: number;
+  profile_context: string;
+  company: string;
+  role: string;
+  job_description: string;
 };
 
 export type LoginResponse = {
@@ -83,6 +108,12 @@ export const api = {
   metrics: (token: string) =>
     apiRequest<DashboardMetrics>("/applications/dashboard/metrics", { token }),
   jobs: (token: string) => apiRequest<JobPosting[]>("/jobs", { token }),
+  importJob: (token: string, payload: JobImportPayload) =>
+    apiRequest<JobPosting>("/jobs/import", { token, method: "POST", body: payload }),
   applications: (token: string) => apiRequest<Application[]>("/applications", { token }),
+  createApplication: (token: string, payload: ApplicationCreatePayload) =>
+    apiRequest<Application>("/applications", { token, method: "POST", body: payload }),
   documents: (token: string) => apiRequest<Document[]>("/documents", { token }),
+  generateCoverLetter: (token: string, payload: CoverLetterPayload) =>
+    apiRequest<Document>("/ai/cover-letter", { token, method: "POST", body: payload }),
 };
