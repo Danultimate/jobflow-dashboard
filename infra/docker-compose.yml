@@ -30,8 +30,20 @@ services:
     build:
       context: ../backend
     restart: unless-stopped
-    env_file:
-      - ../backend/.env
+    environment:
+      APP_NAME: ${APP_NAME:-job-dashboard-api}
+      ENV: ${ENV:-production}
+      API_PREFIX: ${API_PREFIX:-/api}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@db:5432/job_dashboard}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      ENABLE_AUTOMATION: ${ENABLE_AUTOMATION:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      AUTH_USERNAME: ${AUTH_USERNAME:?AUTH_USERNAME is required}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:?AUTH_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-120}
     depends_on:
       db:
         condition: service_healthy
@@ -48,8 +60,20 @@ services:
       context: ../backend
     restart: unless-stopped
     command: ["celery", "-A", "app.workers.celery_app.celery_app", "worker", "--loglevel=info"]
-    env_file:
-      - ../backend/.env
+    environment:
+      APP_NAME: ${APP_NAME:-job-dashboard-api}
+      ENV: ${ENV:-production}
+      API_PREFIX: ${API_PREFIX:-/api}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@db:5432/job_dashboard}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      ENABLE_AUTOMATION: ${ENABLE_AUTOMATION:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      AUTH_USERNAME: ${AUTH_USERNAME:?AUTH_USERNAME is required}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:?AUTH_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-120}
     depends_on:
       redis:
         condition: service_healthy
@@ -60,8 +84,8 @@ services:
     build:
       context: ../frontend
     restart: unless-stopped
-    env_file:
-      - ../frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
     depends_on:
       backend:
         condition: service_started
