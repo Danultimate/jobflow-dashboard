@@ -71,7 +71,7 @@ services:
       context: ./nginx
     restart: unless-stopped
     ports:
-      - "${NGINX_PORT:-8080}:80"
+      - "0:80"
     depends_on:
       frontend:
         condition: service_started
