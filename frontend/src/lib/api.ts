@@ -1,4 +1,16 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+function getApiBase(): string {
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
+  if (typeof window !== "undefined") {
+    const runningOnLocalhost = window.location.hostname === "localhost";
+    const targetsLocalhost =
+      configured.includes("localhost") || configured.includes("127.0.0.1");
+    // Guard against stale production env accidentally pointing to localhost.
+    if (!runningOnLocalhost && targetsLocalhost) {
+      return "/api";
+    }
+  }
+  return configured;
+}
 
 type RequestOptions = {
   token?: string;
@@ -14,12 +26,20 @@ async function apiRequest<T>(path: string, options: RequestOptions = {}): Promis
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  const res = await fetch(`${API_BASE}${path}`, {
-    cache: "no-store",
-    method: options.method || "GET",
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
+  const apiBase = getApiBase();
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      cache: "no-store",
+      method: options.method || "GET",
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new Error(
+      "Network error: cannot reach API. Verify NEXT_PUBLIC_API_BASE_URL and proxy routing."
+    );
+  }
   if (!res.ok) {
     let detail = "";
     try {
