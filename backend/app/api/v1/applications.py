@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.deps import db_session
 from app.models.activity_log import ActivityLog
@@ -35,15 +36,20 @@ def create_application(payload: ApplicationCreate, db: Session = Depends(db_sess
     entity = Application(**payload.model_dump())
     set_default_follow_up(entity)
     db.add(entity)
-    db.add(
-        ActivityLog(
-            application=entity,
-            event_type="application_created",
-            message=f"Application created for {job.company} - {job.title}.",
-        )
-    )
     db.commit()
     db.refresh(entity)
+    try:
+        db.add(
+            ActivityLog(
+                application_id=entity.id,
+                event_type="application_created",
+                message=f"Application created for {job.company} - {job.title}.",
+            )
+        )
+        db.commit()
+    except SQLAlchemyError:
+        # Logging should not block the primary user action.
+        db.rollback()
     return entity
 
 
