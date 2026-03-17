@@ -58,8 +58,8 @@ services:
   worker:
     build:
       context: ../backend
+      dockerfile: Dockerfile.worker
     restart: unless-stopped
-    command: ["celery", "-A", "app.workers.celery_app.celery_app", "worker", "--loglevel=info"]
     environment:
       APP_NAME: ${APP_NAME:-job-dashboard-api}
       ENV: ${ENV:-production}
