@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+
 import httpx
 
 from app.core.config import get_settings
@@ -28,11 +31,16 @@ class LLMService:
 
     async def score_job_fit(self, profile: str, job_description: str) -> str:
         prompt = (
-            "You are a strict career assistant. Return concise JSON with keys "
-            "fit_score_0_100, strengths, risks, and missing_keywords.\n\n"
+            "You are a strict career assistant.\n"
+            "Return plain text only (no JSON, no markdown code fences) using this format:\n"
+            "Fit score: <0-100>\n"
+            "Strengths: <comma-separated>\n"
+            "Risks: <comma-separated>\n"
+            "Missing keywords: <comma-separated>\n\n"
             f"Profile:\n{profile}\n\nJob Description:\n{job_description}"
         )
-        return await self.generate(prompt, temperature=0.1)
+        raw = await self.generate(prompt, temperature=0.1)
+        return self._format_fit_score_response(raw)
 
     async def draft_cover_letter(
         self, profile: str, company: str, role: str, job_description: str
@@ -52,3 +60,33 @@ class LLMService:
             f"Job Description:\n{job_description}"
         )
         return await self.generate(prompt, temperature=0.1)
+
+    def _format_fit_score_response(self, response: str) -> str:
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```[a-zA-Z]*\n?", "", cleaned)
+            cleaned = re.sub(r"\n?```$", "", cleaned).strip()
+        try:
+            parsed = json.loads(cleaned)
+        except json.JSONDecodeError:
+            return cleaned
+        if not isinstance(parsed, dict):
+            return cleaned
+
+        score = parsed.get("fit_score_0_100", "N/A")
+        strengths = parsed.get("strengths", [])
+        risks = parsed.get("risks", [])
+        missing = parsed.get("missing_keywords", [])
+
+        def to_line(value: object) -> str:
+            if isinstance(value, list):
+                return ", ".join(str(item) for item in value) if value else "None"
+            return str(value)
+
+        lines = [
+            f"Fit score: {score}",
+            f"Strengths: {to_line(strengths)}",
+            f"Risks: {to_line(risks)}",
+            f"Missing keywords: {to_line(missing)}",
+        ]
+        return "\n".join(lines)
