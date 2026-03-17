@@ -12,12 +12,18 @@ class LLMService:
     def __init__(self) -> None:
         self.settings = get_settings()
 
-    async def generate(self, prompt: str, temperature: float = 0.2) -> str:
+    async def generate(
+        self, prompt: str, temperature: float = 0.2, max_tokens: int | None = None
+    ) -> str:
+        options: dict[str, float | int] = {"temperature": temperature}
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
         body = {
             "model": self.settings.ollama_model,
             "prompt": prompt,
             "stream": False,
-            "options": {"temperature": temperature},
+            "keep_alive": "30m",
+            "options": options,
         }
         timeout = float(self.settings.ollama_timeout_seconds)
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -39,18 +45,20 @@ class LLMService:
             "Missing keywords: <comma-separated>\n\n"
             f"Profile:\n{profile}\n\nJob Description:\n{job_description}"
         )
-        raw = await self.generate(prompt, temperature=0.1)
+        raw = await self.generate(prompt, temperature=0.1, max_tokens=220)
         return self._format_fit_score_response(raw)
 
     async def draft_cover_letter(
         self, profile: str, company: str, role: str, job_description: str
     ) -> str:
         prompt = (
-            "Write a one-page tailored cover letter. Keep it professional and concrete.\n"
+            "Write a concise tailored cover letter in plain text only (no markdown/code fences).\n"
+            "Limit to 250-320 words, 3 short paragraphs, concrete achievements, no fluff.\n"
             f"Company: {company}\nRole: {role}\n\nProfile:\n{profile}\n\n"
             f"Job Description:\n{job_description}"
         )
-        return await self.generate(prompt, temperature=0.3)
+        raw = await self.generate(prompt, temperature=0.3, max_tokens=420)
+        return self._sanitize_text_output(raw)
 
     async def review_application(self, resume_text: str, cover_letter: str, job_description: str) -> str:
         prompt = (
@@ -59,13 +67,17 @@ class LLMService:
             f"Resume:\n{resume_text}\n\nCover Letter:\n{cover_letter}\n\n"
             f"Job Description:\n{job_description}"
         )
-        return await self.generate(prompt, temperature=0.1)
+        return await self.generate(prompt, temperature=0.1, max_tokens=450)
 
-    def _format_fit_score_response(self, response: str) -> str:
-        cleaned = response.strip()
+    def _sanitize_text_output(self, text: str) -> str:
+        cleaned = text.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r"^```[a-zA-Z]*\n?", "", cleaned)
             cleaned = re.sub(r"\n?```$", "", cleaned).strip()
+        return cleaned
+
+    def _format_fit_score_response(self, response: str) -> str:
+        cleaned = self._sanitize_text_output(response)
         try:
             parsed = json.loads(cleaned)
         except json.JSONDecodeError:
