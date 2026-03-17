@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
+    ollama_timeout_seconds: int = 180
     enable_automation: bool = False
     allowed_origins: str = "http://localhost:3000,http://localhost"
     auth_username: str = "admin"

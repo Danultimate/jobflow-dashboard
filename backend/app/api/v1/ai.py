@@ -42,6 +42,10 @@ def _raise_llm_unavailable(exc: Exception) -> None:
     detail = "LLM service unavailable. Verify OLLAMA_BASE_URL/OLLAMA_MODEL and Ollama container health."
     if isinstance(exc, httpx.HTTPStatusError):
         detail = f"{detail} Upstream status: {exc.response.status_code}."
+    elif isinstance(exc, httpx.ReadTimeout):
+        detail = f"{detail} Upstream timeout. Consider increasing OLLAMA_TIMEOUT_SECONDS."
+    elif isinstance(exc, httpx.RequestError):
+        detail = f"{detail} Request error: {exc!s}"
     raise HTTPException(status_code=502, detail=detail) from exc
 
 

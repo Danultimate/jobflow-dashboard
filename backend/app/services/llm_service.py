@@ -16,7 +16,8 @@ class LLMService:
             "stream": False,
             "options": {"temperature": temperature},
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        timeout = float(self.settings.ollama_timeout_seconds)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{self.settings.ollama_base_url}/api/generate",
                 json=body,
