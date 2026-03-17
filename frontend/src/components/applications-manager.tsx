@@ -24,6 +24,17 @@ export function ApplicationsManager() {
   const [reviewResume, setReviewResume] = useState("");
   const [reviewCoverLetter, setReviewCoverLetter] = useState("");
   const [reviewJobDescription, setReviewJobDescription] = useState("");
+  const [automationLoading, setAutomationLoading] = useState(false);
+  const [automationStatusLoading, setAutomationStatusLoading] = useState(false);
+  const [sessionId, setSessionId] = useState("default");
+  const [cookieHeader, setCookieHeader] = useState("");
+  const [automationJobUrl, setAutomationJobUrl] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [draftEmail, setDraftEmail] = useState("");
+  const [draftPhone, setDraftPhone] = useState("");
+  const [draftCover, setDraftCover] = useState("");
+  const [automationTaskId, setAutomationTaskId] = useState("");
+  const [automationResult, setAutomationResult] = useState("");
 
   async function loadData() {
     const token = getBrowserAuthToken();
@@ -108,6 +119,74 @@ export function ApplicationsManager() {
       setError(message);
     } finally {
       setReviewLoading(false);
+    }
+  }
+
+  async function handleBootstrapSession(event: FormEvent) {
+    event.preventDefault();
+    const token = getBrowserAuthToken();
+    if (!token || !sessionId || !cookieHeader) return;
+    setAutomationLoading(true);
+    setError("");
+    setAutomationResult("");
+    try {
+      const response = await api.linkedinBootstrapSession(token, {
+        session_id: sessionId,
+        cookie_header: cookieHeader,
+      });
+      setAutomationResult(
+        `Session bootstrapped: ${response.session_id} (cookies: ${response.cookie_count})`
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to bootstrap session";
+      setError(message);
+    } finally {
+      setAutomationLoading(false);
+    }
+  }
+
+  async function handleQueueAutomation(event: FormEvent) {
+    event.preventDefault();
+    const token = getBrowserAuthToken();
+    if (!token || !sessionId || !automationJobUrl) return;
+    setAutomationLoading(true);
+    setError("");
+    setAutomationResult("");
+    try {
+      const response = await api.linkedinApplyDraft(token, {
+        job_url: automationJobUrl,
+        session_id: sessionId,
+        draft: {
+          full_name: draftName || undefined,
+          email: draftEmail || undefined,
+          phone: draftPhone || undefined,
+          cover_letter: draftCover || undefined,
+        },
+      });
+      setAutomationTaskId(response.task_id);
+      setAutomationResult(`Task queued: ${response.task_id}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to queue automation";
+      setError(message);
+    } finally {
+      setAutomationLoading(false);
+    }
+  }
+
+  async function handleTaskStatus(event: FormEvent) {
+    event.preventDefault();
+    const token = getBrowserAuthToken();
+    if (!token || !automationTaskId) return;
+    setAutomationStatusLoading(true);
+    setError("");
+    try {
+      const response = await api.linkedinTaskStatus(token, automationTaskId);
+      setAutomationResult(JSON.stringify(response, null, 2));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch task status";
+      setError(message);
+    } finally {
+      setAutomationStatusLoading(false);
     }
   }
 
@@ -243,6 +322,103 @@ export function ApplicationsManager() {
             </pre>
           ) : null}
         </form>
+      </div>
+
+      <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <h2 className="text-lg font-semibold tracking-tight">LinkedIn Automation (Feature Flag)</h2>
+        <p className="text-sm text-slate-600">
+          Bootstrap a LinkedIn session, queue apply draft prefill, then poll task status.
+        </p>
+
+        <form onSubmit={handleBootstrapSession} className="grid gap-3 md:grid-cols-2">
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Session ID"
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            disabled={automationLoading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 md:w-fit"
+          >
+            {automationLoading ? "Saving session..." : "Bootstrap Session"}
+          </button>
+          <textarea
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+            placeholder="Cookie header (e.g., li_at=...; JSESSIONID=...)"
+            value={cookieHeader}
+            onChange={(e) => setCookieHeader(e.target.value)}
+            rows={3}
+            required
+          />
+        </form>
+
+        <form onSubmit={handleQueueAutomation} className="grid gap-3 md:grid-cols-2">
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+            placeholder="LinkedIn job URL"
+            value={automationJobUrl}
+            onChange={(e) => setAutomationJobUrl(e.target.value)}
+            required
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Full name"
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Email"
+            value={draftEmail}
+            onChange={(e) => setDraftEmail(e.target.value)}
+          />
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Phone"
+            value={draftPhone}
+            onChange={(e) => setDraftPhone(e.target.value)}
+          />
+          <textarea
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+            placeholder="Cover letter draft"
+            value={draftCover}
+            onChange={(e) => setDraftCover(e.target.value)}
+            rows={3}
+          />
+          <button
+            type="submit"
+            disabled={automationLoading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 md:w-fit"
+          >
+            {automationLoading ? "Queueing..." : "Queue Apply Draft"}
+          </button>
+        </form>
+
+        <form onSubmit={handleTaskStatus} className="grid gap-3 md:grid-cols-2">
+          <input
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Task ID"
+            value={automationTaskId}
+            onChange={(e) => setAutomationTaskId(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            disabled={automationStatusLoading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 md:w-fit"
+          >
+            {automationStatusLoading ? "Checking..." : "Check Task Status"}
+          </button>
+        </form>
+
+        {automationResult ? (
+          <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-xs text-slate-700">
+            {automationResult}
+          </pre>
+        ) : null}
       </div>
     </section>
   );

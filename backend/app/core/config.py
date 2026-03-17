@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1"
     ollama_timeout_seconds: int = 180
     enable_automation: bool = False
+    linkedin_session_ttl_seconds: int = 604800
+    automation_timeout_ms: int = 90000
+    automation_headless: bool = True
+    automation_user_agent: str | None = None
     allowed_origins: str = "http://localhost:3000,http://localhost"
     auth_username: str = "admin"
     auth_password: str = "change-me"

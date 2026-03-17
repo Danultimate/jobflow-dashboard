@@ -131,6 +131,32 @@ export type AIResponse = {
   result: string;
 };
 
+export type LinkedInSessionBootstrapPayload = {
+  session_id?: string;
+  cookies_json?: string;
+  cookie_header?: string;
+  user_agent?: string;
+};
+
+export type LinkedInApplyPayload = {
+  job_url: string;
+  session_id?: string;
+  draft?: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    cover_letter?: string;
+  };
+};
+
+export type LinkedInTaskResponse = {
+  task_id: string;
+  status: string;
+  ready: boolean;
+  successful: boolean;
+  result?: unknown;
+};
+
 export type LoginResponse = {
   access_token: string;
   token_type: string;
@@ -157,4 +183,16 @@ export const api = {
     apiRequest<AIResponse>("/ai/fit-score", { token, method: "POST", body: payload }),
   reviewApplication: (token: string, payload: ReviewPayload) =>
     apiRequest<AIResponse>("/ai/review", { token, method: "POST", body: payload }),
+  linkedinBootstrapSession: (token: string, payload: LinkedInSessionBootstrapPayload) =>
+    apiRequest<{ ok: boolean; session_id: string; cookie_count: number }>(
+      "/linkedin/automation/session/bootstrap",
+      { token, method: "POST", body: payload }
+    ),
+  linkedinApplyDraft: (token: string, payload: LinkedInApplyPayload) =>
+    apiRequest<{ ok: boolean; task_id: string; status: string }>(
+      "/linkedin/automation/apply",
+      { token, method: "POST", body: payload }
+    ),
+  linkedinTaskStatus: (token: string, taskId: string) =>
+    apiRequest<LinkedInTaskResponse>(`/linkedin/automation/tasks/${taskId}`, { token }),
 };
